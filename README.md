@@ -234,6 +234,27 @@ You can use Label Studio as an independent part of your machine learning workflo
 | [label-studio-converter](https://github.com/HumanSignal/label-studio-sdk/tree/master/src/label_studio_sdk/converter) | Encode labels in the format of your favorite machine learning library |
 | [label-studio-transformers](https://github.com/HumanSignal/label-studio-transformers) | Transformers library connected and configured for use with Label Studio |
 
+## Local installation notes
+
+```bash
+conda create -n label-studio python=3.12.9
+conda activate label-studio
+conda install psycopg2
+git clone https://github.com/[username]/lavel-studio.git
+conda install -c conda-froge poetry
+cd label-studio
+poetry install
+cd web
+npm install --legacy-peer-deps
+npm run build
+cd ..
+# if debugging
+export DEBUG=True
+python label_studio/manage.py migrate
+python label_studio/manage.py collectstatic
+python label_studio/manage.py runserver
+```
+
 ## Citation
 
 Include a citation for Label Studio in the **References** section of your articles:
