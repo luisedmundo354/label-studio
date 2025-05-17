@@ -8,8 +8,8 @@ import {
   IconOutlinerEyeOpened,
   IconSortUp,
   IconSortDown,
-  IconMenu,
 } from "@humansignal/icons";
+import { BranchesOutlined } from "@ant-design/icons";
 
 const RelationsControlsComponent: FC<any> = ({ relationStore }) => {
   return (
@@ -96,7 +96,7 @@ interface ToggleRelationsOutlineButtonProps {
 }
 
 const ToggleRelationsOutlineButton = observer<FC<ToggleRelationsOutlineButtonProps>>(({ relationStore }) => {
-  const toggleOutline = useCallback(
+  const toggleTree = useCallback(
     (e: any) => {
       e.preventDefault();
       e.stopPropagation();
@@ -105,14 +105,14 @@ const ToggleRelationsOutlineButton = observer<FC<ToggleRelationsOutlineButtonPro
     [relationStore],
   );
 
-  const isOutline = relationStore.outlineMode;
+  const isTree = relationStore.outlineMode;
   return (
     <Elem
       tag={Button}
       type="text"
-      onClick={toggleOutline}
-      icon={<IconMenu />}
-      tooltip={isOutline ? "Switch to arrows view" : "Switch to outline view"}
+      onClick={toggleTree}
+      icon={<BranchesOutlined />}
+      tooltip={isTree ? "Switch to arrows view" : "Switch to tree view"}
       tooltipTheme="dark"
     />
   );

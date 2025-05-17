@@ -288,6 +288,19 @@ export const PanelTabsBase: FC<BaseProps> = ({
     [onVisibilityChange, key, visible],
   );
   /**
+   * Restore the panel to its default size and position
+   */
+  const handleRestoreDefault = useCallback(
+    (e: RMouseEvent<HTMLOrSVGElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const { current: k } = keyRef;
+      // reset size and position
+      handlers.current.onResize?.(k, DEFAULT_PANEL_WIDTH, DEFAULT_PANEL_HEIGHT, 0, 0);
+    },
+    [handlers],
+  );
+  /**
    * Maximize the panel to fill the container area
    */
   const handleMaximize = useCallback(
@@ -345,15 +358,6 @@ export const PanelTabsBase: FC<BaseProps> = ({
                 )}
                 {!collapsed && (
                   <>
-                    {/* Collapse/expand panel */}
-                    <Elem
-                      name="toggle"
-                      mod={{ detached, collapsed, alignment }}
-                      onClick={handlePanelToggle}
-                      data-tooltip={tooltipText}
-                    >
-                      {visible ? <IconCollapseSmall /> : <IconExpandSmall />}
-                    </Elem>
                     {/* Maximize to full container */}
                     <Elem
                       name="toggle"
@@ -362,6 +366,15 @@ export const PanelTabsBase: FC<BaseProps> = ({
                       data-tooltip="Maximize Panel"
                     >
                       <IconExpandSmall />
+                    </Elem>
+                    {/* Collapse/expand panel */}
+                    <Elem
+                      name="toggle"
+                      mod={{ detached, collapsed, alignment }}
+                      onClick={handlePanelToggle}
+                      data-tooltip={tooltipText}
+                    >
+                      {visible ? <IconCollapseSmall /> : <IconExpandSmall />}
                     </Elem>
                   </>
                 )}

@@ -8,7 +8,7 @@ import { Block, Elem } from "../../../utils/bem";
 const RelationsOutlineComponent: FC<any> = ({ relationStore }) => {
   return (
     <Block name="relations-outline">
-      <Elem name="empty">Outline view coming soon</Elem>
+      <Elem name="empty">Tree view coming soon</Elem>
     </Block>
   );
 };
