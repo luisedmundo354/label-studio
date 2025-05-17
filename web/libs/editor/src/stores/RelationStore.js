@@ -115,6 +115,8 @@ const RelationStore = types
     showConnections: true,
     _highlighted: null,
     control: null,
+    // toggle between arrow list and outline tree in sidebar
+    outlineMode: false,
   }))
   .views((self) => ({
     get highlighted() {
@@ -243,6 +245,10 @@ const RelationStore = types
           rl.toggleVisibility();
         }
       });
+    },
+    // switch the sidebar to outline/tree mode instead of arrows
+    toggleOutline() {
+      self.outlineMode = !self.outlineMode;
     },
 
     setHighlight(relation) {

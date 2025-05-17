@@ -1,5 +1,6 @@
 import { observer } from "mobx-react";
 import { type FC, useCallback, useMemo, useState } from "react";
+import { RelationsOutline } from "./RelationsOutline";
 import {
   IconMenu,
   IconRelationBi,
@@ -21,7 +22,11 @@ const RealtionsComponent: FC<any> = ({ relationStore }) => {
 
   return (
     <Block name="relations">
-      <RelationsList relations={relations} />
+      {relationStore.outlineMode ? (
+        <RelationsOutline relationStore={relationStore} />
+      ) : (
+        <RelationsList relations={relations} />
+      )}
     </Block>
   );
 };

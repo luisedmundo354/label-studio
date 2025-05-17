@@ -3,13 +3,20 @@ import { observer } from "mobx-react";
 import { Block, Elem } from "../../../utils/bem";
 import { Button } from "../../../common/Button/Button";
 import "./RelationsControls.scss";
-import { IconOutlinerEyeClosed, IconOutlinerEyeOpened, IconSortUp, IconSortDown } from "@humansignal/icons";
+import {
+  IconOutlinerEyeClosed,
+  IconOutlinerEyeOpened,
+  IconSortUp,
+  IconSortDown,
+  IconMenu,
+} from "@humansignal/icons";
 
 const RelationsControlsComponent: FC<any> = ({ relationStore }) => {
   return (
     <Block name="relation-controls">
       <ToggleRelationsVisibilityButton relationStore={relationStore} />
       <ToggleRelationsOrderButton relationStore={relationStore} />
+      <ToggleRelationsOutlineButton relationStore={relationStore} />
     </Block>
   );
 };
@@ -79,6 +86,33 @@ const ToggleRelationsOrderButton = observer<FC<ToggleRelationsOrderButtonProps>>
       aria-label={isAsc ? "Order by oldest" : "Order by newest"}
       icon={isAsc ? <IconSortUp /> : <IconSortDown />}
       tooltip={isAsc ? "Order by oldest" : "Order by newest"}
+      tooltipTheme="dark"
+    />
+  );
+});
+// Button to switch to outline/tree view
+interface ToggleRelationsOutlineButtonProps {
+  relationStore: any;
+}
+
+const ToggleRelationsOutlineButton = observer<FC<ToggleRelationsOutlineButtonProps>>(({ relationStore }) => {
+  const toggleOutline = useCallback(
+    (e: any) => {
+      e.preventDefault();
+      e.stopPropagation();
+      relationStore.toggleOutline();
+    },
+    [relationStore],
+  );
+
+  const isOutline = relationStore.outlineMode;
+  return (
+    <Elem
+      tag={Button}
+      type="text"
+      onClick={toggleOutline}
+      icon={<IconMenu />}
+      tooltip={isOutline ? "Switch to arrows view" : "Switch to outline view"}
       tooltipTheme="dark"
     />
   );

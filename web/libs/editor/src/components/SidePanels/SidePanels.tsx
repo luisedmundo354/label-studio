@@ -455,16 +455,18 @@ const SidePanelsComponent: FC<SidePanelsProps> = ({ currentEntity, panelsHidden,
         viewportSize.current.height = clientHeight ?? 0;
 
         setViewportSizeMatch(checkContentFit());
-        setPanelMaxWidth(rootRef.current.clientWidth * 0.4);
+        // allow panel to expand up to full width for outline development
+        setPanelMaxWidth(rootRef.current.clientWidth);
       });
     });
 
-    if (root) {
-      observer.observe(root);
-      setViewportSizeMatch(checkContentFit());
-      setPanelMaxWidth(root.clientWidth * 0.4);
-      setInitialized(true);
-    }
+      if (root) {
+        observer.observe(root);
+        setViewportSizeMatch(checkContentFit());
+        // initial panel max width: full viewport width
+        setPanelMaxWidth(root.clientWidth);
+        setInitialized(true);
+      }
 
     return () => {
       if (root) observer.unobserve(root);

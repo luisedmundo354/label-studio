@@ -223,7 +223,12 @@ export const PanelTabsBase: FC<BaseProps> = ({
           const shiftTop = isDefined(shift) && ["top", "top-left"].includes(shift);
 
           const width = clamp(shiftLeft ? w - wMod : w + wMod, DEFAULT_PANEL_WIDTH, maxWidth);
-          const height = clamp(shiftTop ? h - hMod : h + hMod, DEFAULT_PANEL_MIN_HEIGHT, t + h);
+          // desired new height based on drag
+          const desiredHeight = shiftTop ? h - hMod : h + hMod;
+          // determine max allowed height: if dragging bottom (not shiftTop), fill to container bottom
+          const containerHeight = root.current?.clientHeight ?? Infinity;
+          const maxAllowedHeight = !shiftTop ? containerHeight - t : t + h;
+          const height = clamp(desiredHeight, DEFAULT_PANEL_MIN_HEIGHT, maxAllowedHeight);
 
           const top = shiftTop ? t + (h - height) : t;
           const left = shiftLeft ? l + (w - width) : l;
@@ -282,6 +287,24 @@ export const PanelTabsBase: FC<BaseProps> = ({
     },
     [onVisibilityChange, key, visible],
   );
+  /**
+   * Maximize the panel to fill the container area
+   */
+  const handleMaximize = useCallback(
+    (e: RMouseEvent<HTMLOrSVGElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      // container that hosts panels
+      const container = root.current;
+      if (!container) return;
+      const newWidth = container.clientWidth;
+      const newHeight = container.clientHeight;
+      const { current: k } = keyRef;
+      // position at top-left
+      handlers.current.onResize?.(k, newWidth, newHeight, 0, 0);
+    },
+    [handlers],
+  );
 
   return (
     <Block ref={panelRef} name="tabs-panel" mod={mods} style={{ ...style, ...coordinates }}>
@@ -321,14 +344,26 @@ export const PanelTabsBase: FC<BaseProps> = ({
                   </Elem>
                 )}
                 {!collapsed && (
-                  <Elem
-                    name="toggle"
-                    mod={{ detached, collapsed, alignment }}
-                    onClick={handlePanelToggle}
-                    data-tooltip={tooltipText}
-                  >
-                    {visible ? <IconCollapseSmall /> : <IconExpandSmall />}
-                  </Elem>
+                  <>
+                    {/* Collapse/expand panel */}
+                    <Elem
+                      name="toggle"
+                      mod={{ detached, collapsed, alignment }}
+                      onClick={handlePanelToggle}
+                      data-tooltip={tooltipText}
+                    >
+                      {visible ? <IconCollapseSmall /> : <IconExpandSmall />}
+                    </Elem>
+                    {/* Maximize to full container */}
+                    <Elem
+                      name="toggle"
+                      mod={{ detached, collapsed, alignment }}
+                      onClick={handleMaximize}
+                      data-tooltip="Maximize Panel"
+                    >
+                      <IconExpandSmall />
+                    </Elem>
+                  </>
                 )}
               </Elem>
             </Elem>
