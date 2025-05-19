@@ -326,13 +326,20 @@ const useEventHandlers = () => {
     regionStore.unhighlightAll();
 
     if (treeDepth === 2 && dropToGap && dropPosition === -1) {
-      // remove existing directed relation dropReg -> dragReg
+      // remove all relations involving this region, and ungroup to top-level
       try {
-        relationStore.findRelations(dropReg, dragReg).forEach((rl) => {
+        // findRelations(node) with single arg returns any relation containing node
+        relationStore.findRelations(dragReg).forEach((rl) => {
           relationStore.deleteRelation(rl);
         });
       } catch (err) {
-        console.error("Error removing relation on ungroup:", err);
+        console.error("Error removing all relations on ungroup:", err);
+      }
+      // clear grouping parent
+      try {
+        dragReg.setParentID("");
+      } catch (err) {
+        console.error("Error clearing parentID on ungroup:", err);
       }
     } else if (dropPosition !== -1) {
       // check if the dragReg can be a child of dropReg
