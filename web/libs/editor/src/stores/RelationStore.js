@@ -180,14 +180,45 @@ const RelationStore = types
       if (self.nodesRelated(node1, node2)) return;
 
       const rl = Relation.create({ node1, node2 });
-
-      // self.relations.unshift(rl);
       self.relations.push(rl);
+
+      // sync grouping in outliner tree
+      try {
+        const dir = rl.direction;
+        if (dir === "right") {
+          // parent -> child
+          node2.setParentID(node1.id);
+        } else if (dir === "left") {
+          // reverse direction
+          node1.setParentID(node2.id);
+        } else if (dir === "bi") {
+          // undirected: siblings at root
+          node1.setParentID("");
+          node2.setParentID("");
+        }
+      } catch (err) {
+        console.error("Error syncing group on addRelation:", err);
+      }
 
       return rl;
     },
 
     deleteRelation(rl) {
+      const { node1, node2, direction } = rl;
+      // sync grouping removal
+      try {
+        if (direction === "right") {
+          node2.setParentID("");
+        } else if (direction === "left") {
+          node1.setParentID("");
+        } else if (direction === "bi") {
+          node1.setParentID("");
+          node2.setParentID("");
+        }
+      } catch (err) {
+        console.error("Error syncing group on deleteRelation:", err);
+      }
+
       self.relations = self.relations.filter((r) => r.id !== rl.id);
       destroy(rl);
     },
@@ -200,7 +231,23 @@ const RelationStore = types
     },
 
     deleteAllRelations() {
-      self.relations.forEach((rl) => destroy(rl));
+      // remove grouping for all relations
+      self.relations.forEach((rl) => {
+        const { node1, node2, direction } = rl;
+        try {
+          if (direction === "right") {
+            node2.setParentID("");
+          } else if (direction === "left") {
+            node1.setParentID("");
+          } else if (direction === "bi") {
+            node1.setParentID("");
+            node2.setParentID("");
+          }
+        } catch (err) {
+          console.error("Error syncing group on deleteAllRelations:", err);
+        }
+        destroy(rl);
+      });
       self.relations = [];
     },
 
@@ -220,12 +267,42 @@ const RelationStore = types
     },
 
     deserializeRelation(node1, node2, direction, labels) {
+      // add relation with default direction (will apply default grouping), then fix
       const rl = self.addRelation(node1, node2);
-
       if (!rl) return; // duplicated relation
 
+      // remove grouping applied by default
+      try {
+        const prevDir = rl.direction;
+        if (prevDir === "right") {
+          node2.setParentID("");
+        } else if (prevDir === "left") {
+          node1.setParentID("");
+        } else if (prevDir === "bi") {
+          node1.setParentID("");
+          node2.setParentID("");
+        }
+      } catch (err) {
+        console.error("Error syncing group on deserializeRelation cleanup:", err);
+      }
+
+      // set actual direction and labels
       rl.direction = direction;
       rl.labels = labels;
+
+      // sync grouping for actual direction
+      try {
+        if (direction === "right") {
+          node2.setParentID(node1.id);
+        } else if (direction === "left") {
+          node1.setParentID(node2.id);
+        } else if (direction === "bi") {
+          node1.setParentID("");
+          node2.setParentID("");
+        }
+      } catch (err) {
+        console.error("Error syncing group on deserializeRelation apply:", err);
+      }
     },
 
     toggleConnections() {

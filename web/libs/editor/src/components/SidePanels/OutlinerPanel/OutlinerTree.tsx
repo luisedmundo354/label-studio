@@ -313,18 +313,27 @@ const useEventHandlers = () => {
     const dropKey = node.props.eventKey;
     const dragKey = dragNode.props.eventKey;
     const dropPos = node.props.pos.split("-");
-    const regions = node.item.annotation.regionStore;
+    const annotation = node.item.annotation;
+    const regionStore = annotation.regionStore;
+    const relationStore = annotation.relationStore;
 
     dropPosition = dropPosition - Number.parseInt(dropPos[dropPos.length - 1]);
     const treeDepth = dropPos.length;
 
-    const dragReg = regions.findRegionID(dragKey);
-    const dropReg = regions.findRegionID(dropKey);
+    const dragReg = regionStore.findRegionID(dragKey);
+    const dropReg = regionStore.findRegionID(dropKey);
 
-    regions.unhighlightAll();
+    regionStore.unhighlightAll();
 
     if (treeDepth === 2 && dropToGap && dropPosition === -1) {
-      dragReg.setParentID("");
+      // remove existing directed relation dropReg -> dragReg
+      try {
+        relationStore.findRelations(dropReg, dragReg).forEach((rl) => {
+          relationStore.deleteRelation(rl);
+        });
+      } catch (err) {
+        console.error("Error removing relation on ungroup:", err);
+      }
     } else if (dropPosition !== -1) {
       // check if the dragReg can be a child of dropReg
       const selDrop: any[] = dropReg.labeling?.selectedLabels || [];
@@ -348,7 +357,7 @@ const useEventHandlers = () => {
           let reg = dropReg;
 
           while (reg) {
-            reg = regions.findRegion(reg.parentID);
+            reg = regionStore.findRegion(reg.parentID);
             maxDepth = maxDepth - 1;
           }
 
@@ -356,7 +365,14 @@ const useEventHandlers = () => {
         }
       }
 
-      dragReg.setParentID(dropReg.id);
+      // add directed relation dropReg -> dragReg
+      try {
+        if (!relationStore.nodesRelated(dropReg, dragReg)) {
+          relationStore.addRelation(dropReg, dragReg);
+        }
+      } catch (err) {
+        console.error("Error adding relation on group:", err);
+      }
     }
   }, []);
 

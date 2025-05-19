@@ -287,37 +287,6 @@ export const PanelTabsBase: FC<BaseProps> = ({
     },
     [onVisibilityChange, key, visible],
   );
-  /**
-   * Restore the panel to its default size and position
-   */
-  const handleRestoreDefault = useCallback(
-    (e: RMouseEvent<HTMLOrSVGElement>) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const { current: k } = keyRef;
-      // reset size and position
-      handlers.current.onResize?.(k, DEFAULT_PANEL_WIDTH, DEFAULT_PANEL_HEIGHT, 0, 0);
-    },
-    [handlers],
-  );
-  /**
-   * Maximize the panel to fill the container area
-   */
-  const handleMaximize = useCallback(
-    (e: RMouseEvent<HTMLOrSVGElement>) => {
-      e.stopPropagation();
-      e.preventDefault();
-      // container that hosts panels
-      const container = root.current;
-      if (!container) return;
-      const newWidth = container.clientWidth;
-      const newHeight = container.clientHeight;
-      const { current: k } = keyRef;
-      // position at top-left
-      handlers.current.onResize?.(k, newWidth, newHeight, 0, 0);
-    },
-    [handlers],
-  );
 
   return (
     <Block ref={panelRef} name="tabs-panel" mod={mods} style={{ ...style, ...coordinates }}>
@@ -346,7 +315,8 @@ export const PanelTabsBase: FC<BaseProps> = ({
                 {!visible && !collapsed && <Elem name="title">{panelViews.map((view) => view.title).join(" ")}</Elem>}
               </Elem>
               <Elem name="header-right">
-                {(!detached || collapsed) && (
+                {/* Collapse/expand panel group */}
+                {(!detached || !collapsed) && (
                   <Elem
                     name="toggle"
                     mod={{ detached, collapsed, alignment }}
@@ -358,15 +328,6 @@ export const PanelTabsBase: FC<BaseProps> = ({
                 )}
                 {!collapsed && (
                   <>
-                    {/* Maximize to full container */}
-                    <Elem
-                      name="toggle"
-                      mod={{ detached, collapsed, alignment }}
-                      onClick={handleMaximize}
-                      data-tooltip="Maximize Panel"
-                    >
-                      <IconExpandSmall />
-                    </Elem>
                     {/* Collapse/expand panel */}
                     <Elem
                       name="toggle"
