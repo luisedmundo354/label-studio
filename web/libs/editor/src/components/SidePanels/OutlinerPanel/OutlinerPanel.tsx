@@ -64,7 +64,8 @@ const OutlinerPanelComponent: FC<OutlinerPanelProps> = ({ regions, ...props }) =
   );
 };
 
-const OutlinerStandAlone: FC<OutlinerPanelProps> = ({ regions }) => {
+// Standalone outliner used in tabbed UI; also support hiding arrows
+const OutlinerStandAlone: FC<OutlinerPanelProps & { relationStore?: any }> = ({ regions, relationStore }) => {
   const onOrderingChange = useCallback(
     (value) => {
       regions.setSort(value);
@@ -92,6 +93,7 @@ const OutlinerStandAlone: FC<OutlinerPanelProps> = ({ regions }) => {
         ordering={regions.sort}
         regions={regions}
         orderingDirection={regions.sortOrder}
+        relationStore={relationStore}
         onOrderingChange={onOrderingChange}
         onGroupingChange={onGroupingChange}
         onFilterChange={onFilterChange}

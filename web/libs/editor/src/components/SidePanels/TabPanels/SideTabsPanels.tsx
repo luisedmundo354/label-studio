@@ -385,6 +385,8 @@ const SideTabsPanelsComponent: FC<SidePanelsProps> = ({
       regions,
       selection: regions.selection,
       currentEntity,
+      // provide relation store for arrow visibility control
+      relationStore: currentEntity?.relationStore,
     };
   }, [eventHandlers, regions, regions.selection, currentEntity]);
 

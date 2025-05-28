@@ -36,10 +36,12 @@ interface ViewControlsProps {
   onOrderingChange: (ordering: OrderingOptions) => void;
   onGroupingChange: (grouping: GroupingOptions) => void;
   onFilterChange: (filter: any) => void;
+  // store for relation arrows overlay
+  relationStore?: any;
 }
 
 export const ViewControls: FC<ViewControlsProps> = observer(
-  ({ ordering, regions, orderingDirection, onOrderingChange, onGroupingChange, onFilterChange }) => {
+  ({ ordering, regions, orderingDirection, relationStore, onOrderingChange, onGroupingChange, onFilterChange }) => {
     const grouping = regions.group;
     const context = useContext(SidePanelsContext);
     const getGroupingLabels = useCallback((value: GroupingOptions): LabelInfo => {
@@ -129,6 +131,7 @@ export const ViewControls: FC<ViewControlsProps> = observer(
           </Elem>
         )}
         <ToggleRegionsVisibilityButton regions={regions} />
+        <ToggleConnectionsButton relationStore={relationStore} />
       </Block>
     );
   },
@@ -292,5 +295,49 @@ const ToggleRegionsVisibilityButton = observer<FC<ToggleRegionsVisibilityButton>
       tooltip={isAllHidden ? "Show all regions" : "Hide all regions"}
       tooltipTheme="dark"
     />
+  );
+});
+
+// Button to hide/show only the relation arrows overlay
+interface ToggleConnectionsButtonProps {
+  relationStore?: any;
+}
+
+const ToggleConnectionsButton: FC<ToggleConnectionsButtonProps> = observer(({ relationStore }) => {
+  const toggleConnections = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    relationStore?.toggleConnections();
+  }, [relationStore]);
+
+  const isDisabled = !relationStore?.relations?.length;
+  const isHidden = relationStore ? !relationStore.showConnections : false;
+
+  return (
+      <Elem
+        tag={Button}
+        type="text"
+        disabled={isDisabled}
+        onClick={toggleConnections}
+        mod={{ hidden: isHidden }}
+        aria-label={isHidden ? "Show all relation arrows" : "Hide all relation arrows"}
+        icon={
+          isHidden ? (
+            <IconOutlinerEyeClosed
+              width={16}
+              height={16}
+              style={{ color: 'orange' }}
+            />
+          ) : (
+            <IconOutlinerEyeOpened
+              width={16}
+              height={16}
+              style={{ color: 'orange' }}
+            />
+          )
+        }
+        tooltip={isHidden ? "Show all relation arrows" : "Hide all relation arrows"}
+        tooltipTheme="dark"
+      />
   );
 });
