@@ -115,8 +115,8 @@ const RelationStore = types
     showConnections: true,
     _highlighted: null,
     control: null,
-    // toggle between arrow list and outline tree in sidebar
-    outlineMode: false,
+    // toggle between arrow list and relations tree view in sidebar
+    treeMode: false,
   }))
   .views((self) => ({
     get highlighted() {
@@ -323,9 +323,9 @@ const RelationStore = types
         }
       });
     },
-    // switch the sidebar to outline/tree mode instead of arrows
-    toggleOutline() {
-      self.outlineMode = !self.outlineMode;
+    // switch the sidebar to tree mode instead of arrows
+    toggleTree() {
+      self.treeMode = !self.treeMode;
     },
 
     setHighlight(relation) {

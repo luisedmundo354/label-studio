@@ -16,7 +16,7 @@ const RelationsControlsComponent: FC<any> = ({ relationStore }) => {
     <Block name="relation-controls">
       <ToggleRelationsVisibilityButton relationStore={relationStore} />
       <ToggleRelationsOrderButton relationStore={relationStore} />
-      <ToggleRelationsOutlineButton relationStore={relationStore} />
+      <ToggleRelationsTreeButton relationStore={relationStore} />
     </Block>
   );
 };
@@ -90,22 +90,22 @@ const ToggleRelationsOrderButton = observer<FC<ToggleRelationsOrderButtonProps>>
     />
   );
 });
-// Button to switch to outline/tree view
-interface ToggleRelationsOutlineButtonProps {
+// Button to switch to tree view
+interface ToggleRelationsTreeButtonProps {
   relationStore: any;
 }
 
-const ToggleRelationsOutlineButton = observer<FC<ToggleRelationsOutlineButtonProps>>(({ relationStore }) => {
+const ToggleRelationsTreeButton = observer<FC<ToggleRelationsTreeButtonProps>>(({ relationStore }) => {
   const toggleTree = useCallback(
     (e: any) => {
       e.preventDefault();
       e.stopPropagation();
-      relationStore.toggleOutline();
+      relationStore.toggleTree();
     },
     [relationStore],
   );
 
-  const isTree = relationStore.outlineMode;
+  const isTree = relationStore.treeMode;
   return (
     <Elem
       tag={Button}
