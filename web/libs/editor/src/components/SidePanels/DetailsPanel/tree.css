@@ -1,0 +1,72 @@
+/* Wraps multiple tree instances side by side or stacked */
+.tree-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Each tree gets its own wrapper; flex-basis controls minimum width */
+.tree-wrapper {
+  flex: 1 1 300px;
+  min-height: 600px;
+  height: auto;
+}
+
+/* Custom node element styles */
+.node-circle {
+  fill: #656c7c;
+  stroke: #090909;
+  stroke-width: 1px;
+}
+
+.mixed-node-content[data-type="Rule"] {
+  background-color: lightgreen;
+}
+
+.mixed-node-content[data-type="Analysis"] {
+  background-color: lightblue;
+}
+
+.mixed-node-content[data-type="Conclusion"] {
+  background-color: lightcoral;
+}
+
+.mixed-node-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #888;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+}
+
+.mixed-node-title {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+  text-align: center;
+  color: #000000;
+}
+
+.mixed-node-text {
+  font-size: 0.75rem;
+  margin: 0.25rem 0;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #000000;
+}
+
+.mixed-node-toggle {
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #f8f8ff;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  cursor: pointer;
+}
