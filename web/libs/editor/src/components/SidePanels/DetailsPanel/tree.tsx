@@ -32,27 +32,30 @@ interface RawNodeDatum {
 }
 
 
-// Custom node element: HTML box only (no circle)
-const MixedNodeElement = ({nodeDatum, toggleNode}: CustomNodeElementProps) => (
-  <g>
-    <foreignObject
-      x={-NODE_WIDTH / 2}
-      y={0}
-      width={NODE_WIDTH}
-      height={NODE_HEIGHT}
-    >
-      <div className="mixed-node-content" data-type={nodeDatum.name}>
-        <h3 className="mixed-node-title">{nodeDatum.name}</h3>
-        <p className="mixed-node-text">{nodeDatum.attributes.text}</p>
-        {nodeDatum.children && nodeDatum.children.length > 0 && (
-          <button className="mixed-node-toggle" onClick={toggleNode}>
-            {nodeDatum.__rd3t.collapsed ? '➡️ Expand' : '⬅️ Collapse'}
-          </button>
-        )}
-      </div>
-    </foreignObject>
-  </g>
-);
+// Custom node element: HTML box only
+const MixedNodeElement = ({nodeDatum, toggleNode}: CustomNodeElementProps) => {
+  const bg = nodeDatum.attributes.color;
+  return (
+    <g>
+      <foreignObject
+        x={-NODE_WIDTH / 2}
+        y={0}
+        width={NODE_WIDTH}
+        height={NODE_HEIGHT}
+      >
+        <div className="mixed-node-content" style={{ '--node-bg': bg } as any} data-type={nodeDatum.name}>
+          <h3 className="mixed-node-title">{nodeDatum.name}</h3>
+          <p className="mixed-node-text">{nodeDatum.attributes.text}</p>
+          {nodeDatum.children && nodeDatum.children.length > 0 && (
+            <button className="mixed-node-toggle" onClick={toggleNode}>
+              {nodeDatum.__rd3t.collapsed ? '➡️ Expand' : '⬅️ Collapse'}
+            </button>
+          )}
+        </div>
+      </foreignObject>
+    </g>
+  );
+};
 
 interface PremisesTreeProps {
   relationStore: any;
@@ -69,13 +72,19 @@ const PremisesTree: React.FC<PremisesTreeProps> = observer(({relationStore}) => 
     if (!nodes[node1.id]) {
       nodes[node1.id] = {
         name: node1.labelName || node1.id,
-        attributes: {text: extractText(node1)},
+        attributes: {
+          text: extractText(node1),
+          color: node1.background ?? node1.getOneColor?.() ?? '#ccc',
+        },
       };
     }
     if (!nodes[node2.id]) {
       nodes[node2.id] = {
         name: node2.labelName || node2.id,
-        attributes: {text: extractText(node2)},
+        attributes: {
+          text: extractText(node2),
+          color: node2.background ?? node2.getOneColor?.() ?? '#ccc',
+        },
       };
     }
   });
@@ -102,7 +111,7 @@ const PremisesTree: React.FC<PremisesTreeProps> = observer(({relationStore}) => 
     // mark this node as having a parent
     childIds.add(childId);
   });
-  
+
   // Detect directed cycles in the inverted graph
   const dirAdj: Record<string, string[]> = {};
   Object.keys(nodes).forEach((id) => {

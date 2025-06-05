@@ -21,16 +21,9 @@
   stroke-width: 1px;
 }
 
-.mixed-node-content[data-type="Rule"] {
-  background-color: lightgreen;
-}
-
-.mixed-node-content[data-type="Analysis"] {
-  background-color: lightblue;
-}
-
-.mixed-node-content[data-type="Conclusion"] {
-  background-color: lightcoral;
+.mixed-node-content {
+  --node-bg: #ffffff;
+  background-color: var(--node-bg);
 }
 
 .mixed-node-content {
