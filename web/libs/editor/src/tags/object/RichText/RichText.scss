@@ -151,6 +151,15 @@
       }
     }
   }
+  :global(.htx-static-block) {
+    display: inline-block;
+    margin: 0.5em 0;
+    padding: 0.25em 0.5em;
+    background-color: #eef;
+    border: 1px solid #88a;
+    cursor: pointer;
+    border-radius: 2px;
+  }
 }
 
 :global(.htx-no-label)::after {

@@ -19,6 +19,7 @@ import {
 } from "../../../utils/selection-tools";
 import { isDefined } from "../../../utils/utilities";
 import "./RichText.scss";
+import {control} from "keymaster";
 
 const DBLCLICK_TIMEOUT = 450; // ms
 const DBLCLICK_RANGE = 5; // px
@@ -353,6 +354,24 @@ class RichTextPieceView extends Component {
       x: ev.pageX,
       y: ev.pageY,
     };
+  };
+
+  /**
+   *
+   * Click-handler method for new textRegion instances
+   */
+
+  _onAddStaticBlockClick = (ev) => {
+    ev.stopPropagation();
+    const { item } = this.props;
+    // append a new block of text or HTML to the existing content
+    const current = item._value || "";
+    const insert = item.type === "text"
+      ? "\nNew static text block"
+      : "<p>New static HTML block</p>";
+    item.updateLocalValue(current + insert);
+    // re-render and apply all highlights to updated content
+    item.needsUpdate();
   };
 
   /**

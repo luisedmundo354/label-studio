@@ -44,6 +44,16 @@ const TaskStore = types
       }
       return null;
     },
+  }))
+  .actions((self) => ({
+    /**
+     * Update the raw JSON string for persistence.
+     *
+     * @param {string} newData - The new serialized data.
+     */
+    setData(newData) {
+      self.data = newData;
+    },
   }));
 
 export default TaskStore;

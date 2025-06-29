@@ -187,14 +187,14 @@ const RelationStore = types
         const dir = rl.direction;
         if (dir === "right") {
           // parent -> child
-          node2.setParentID(node1.id);
+          rl.node2.setParentID(node1.id);
         } else if (dir === "left") {
           // reverse direction
-          node1.setParentID(node2.id);
+          rl.node1.setParentID(node2.id);
         } else if (dir === "bi") {
           // undirected: siblings at root
-          node1.setParentID("");
-          node2.setParentID("");
+          rl.node1.setParentID("");
+          rl.node2.setParentID("");
         }
       } catch (err) {
         console.error("Error syncing group on addRelation:", err);
@@ -208,12 +208,12 @@ const RelationStore = types
       // sync grouping removal
       try {
         if (direction === "right") {
-          node2.setParentID("");
+          rl.node2.setParentID("");
         } else if (direction === "left") {
-          node1.setParentID("");
+          rl.node1.setParentID("");
         } else if (direction === "bi") {
-          node1.setParentID("");
-          node2.setParentID("");
+          rl.node1.setParentID("");
+          rl.node2.setParentID("");
         }
       } catch (err) {
         console.error("Error syncing group on deleteRelation:", err);
@@ -236,12 +236,12 @@ const RelationStore = types
         const { node1, node2, direction } = rl;
         try {
           if (direction === "right") {
-            node2.setParentID("");
+            rl.node2.setParentID("");
           } else if (direction === "left") {
-            node1.setParentID("");
+            rl.node1.setParentID("");
           } else if (direction === "bi") {
-            node1.setParentID("");
-            node2.setParentID("");
+            rl.node1.setParentID("");
+            rl.node2.setParentID("");
           }
         } catch (err) {
           console.error("Error syncing group on deleteAllRelations:", err);
@@ -275,12 +275,12 @@ const RelationStore = types
       try {
         const prevDir = rl.direction;
         if (prevDir === "right") {
-          node2.setParentID("");
+          rl.node2.setParentID("");
         } else if (prevDir === "left") {
-          node1.setParentID("");
+          rl.node1.setParentID("");
         } else if (prevDir === "bi") {
-          node1.setParentID("");
-          node2.setParentID("");
+          rl.node1.setParentID("");
+          rl.node2.setParentID("");
         }
       } catch (err) {
         console.error("Error syncing group on deserializeRelation cleanup:", err);
@@ -293,12 +293,12 @@ const RelationStore = types
       // sync grouping for actual direction
       try {
         if (direction === "right") {
-          node2.setParentID(node1.id);
+          rl.node2.setParentID(node1.id);
         } else if (direction === "left") {
-          node1.setParentID(node2.id);
+          rl.node1.setParentID(node2.id);
         } else if (direction === "bi") {
-          node1.setParentID("");
-          node2.setParentID("");
+          rl.node1.setParentID("");
+          rl.node2.setParentID("");
         }
       } catch (err) {
         console.error("Error syncing group on deserializeRelation apply:", err);

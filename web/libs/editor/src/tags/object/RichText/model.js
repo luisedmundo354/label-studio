@@ -421,6 +421,31 @@ const Model = types
 
         return area;
       },
+
+      addStaticBlock() {
+        const prev = self._value || "";
+        const insert = self.type === "text"
+          ? "\n New static block"
+          : "<p> New static block </p>";
+        self.persistLocalValue(prev + insert);
+        self.needsUpdate();
+      },
+
+      persistLocalValue(newValue) {
+        self._value = newValue;
+
+        if (typeof self.value === "string" && self.value.startsWith("$")) {
+          const key = self.value.slice(1);
+          const task = self.store.task;
+          if (task) {
+            task.dataObj[key] = newValue;
+            task.setData(JSON.stringify(task.dataObj));
+          } else {
+            console.warn("Cannot persist value to task data object, because task is not loaded yet");
+            self.value = newValue;
+          }
+        }
+      },
     };
   });
 

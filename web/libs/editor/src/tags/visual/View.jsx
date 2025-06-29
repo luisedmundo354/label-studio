@@ -1,4 +1,4 @@
-import { observer } from "mobx-react";
+import { inject, observer } from "mobx-react";
 import { types } from "mobx-state-tree";
 
 import Registry from "../../core/Registry";
@@ -6,6 +6,8 @@ import Tree from "../../core/Tree";
 import Types from "../../core/Types";
 import VisibilityMixin from "../../mixins/Visibility";
 import { AnnotationMixin } from "../../mixins/AnnotationMixin";
+
+import "./View.scss";
 
 /**
  * The `View` element is used to configure the display of blocks, similar to the div tag in HTML.
@@ -133,7 +135,7 @@ const Model = types
 
 const ViewModel = types.compose("ViewModel", TagAttrs, Model, VisibilityMixin, AnnotationMixin);
 
-const HtxView = observer(({ item }) => {
+const HtxView = inject("store")(observer(({ item, store }) => {
   let style = {};
 
   if (item.display === "inline") {
@@ -151,9 +153,25 @@ const HtxView = observer(({ item }) => {
   return (
     <div id={item.idattr} className={item.classname} style={style}>
       {Tree.renderChildren(item, item.annotation)}
+
+      <button
+        className="static-block-btn"
+        onClick={() => {
+          const rt = item.children.find(
+            (child) => child.type === "richtext" || child.type === "text"
+          );
+          rt?.addStaticBlock();
+          // Create or update annotation so the server receives the new block
+          setTimeout(() => {
+            store.submitAnnotation();
+          });
+        }}
+      >
+        Static Block
+      </button>
     </div>
   );
-});
+}));
 
 Registry.addTag("view", ViewModel, HtxView);
 

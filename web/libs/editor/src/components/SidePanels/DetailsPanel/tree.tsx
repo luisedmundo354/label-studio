@@ -43,7 +43,7 @@ const MixedNodeElement = ({nodeDatum, toggleNode}: CustomNodeElementProps) => {
         width={NODE_WIDTH}
         height={NODE_HEIGHT}
       >
-        <div className="mixed-node-content" style={{ '--node-bg': bg } as any} data-type={nodeDatum.name}>
+        <div className="mixed-node-content" style={{'--node-bg': bg} as any} data-type={nodeDatum.name}>
           <h3 className="mixed-node-title">{nodeDatum.name}</h3>
           <p className="mixed-node-text">{nodeDatum.attributes.text}</p>
           {nodeDatum.children && nodeDatum.children.length > 0 && (
@@ -63,6 +63,16 @@ interface PremisesTreeProps {
 
 const PremisesTree: React.FC<PremisesTreeProps> = observer(({relationStore}) => {
   const relations = relationStore.orderedRelations || [];
+
+  // Catch bidirectional relations
+  if (relations.some((rel: any) => rel.direction === 'bi')) {
+    return (
+      <div className="tree-error">
+        Bidirectional relations are not supported in tree view.
+      </div>
+    );
+  }
+
   const nodes: Record<string, RawNodeDatum> = {};
   const childIds = new Set<string>();
 
@@ -89,7 +99,7 @@ const PremisesTree: React.FC<PremisesTreeProps> = observer(({relationStore}) => 
     }
   });
 
-  // Build adjacency (directed edges only)
+  // Build adjacency
   relations.forEach((rel: any) => {
     let parentNode: RawNodeDatum;
     let childNode: RawNodeDatum;
@@ -100,7 +110,7 @@ const PremisesTree: React.FC<PremisesTreeProps> = observer(({relationStore}) => 
       childNode = nodes[rel.node2.id];
       childId = rel.node2.id;
     } else if (rel.direction === 'right') {
-      // right or bi (or default): node1 -> node2
+      // right: node1 -> node2
       parentNode = nodes[rel.node2.id];
       childNode = nodes[rel.node1.id];
       childId = rel.node1.id;
@@ -118,7 +128,7 @@ const PremisesTree: React.FC<PremisesTreeProps> = observer(({relationStore}) => 
     dirAdj[id] = [];
   });
   relations.forEach((rel: any) => {
-    // invert edge: follow same logic as adjacency build
+    // invert edge: follow the same logic as adjacency build
     const fromId = rel.direction === 'left' ? rel.node1.id : rel.node2.id;
     const toId = rel.direction === 'left' ? rel.node2.id : rel.node1.id;
     dirAdj[fromId].push(toId);
