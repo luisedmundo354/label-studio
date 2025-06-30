@@ -153,22 +153,6 @@ const HtxView = inject("store")(observer(({ item, store }) => {
   return (
     <div id={item.idattr} className={item.classname} style={style}>
       {Tree.renderChildren(item, item.annotation)}
-
-      <button
-        className="static-block-btn"
-        onClick={() => {
-          const rt = item.children.find(
-            (child) => child.type === "richtext" || child.type === "text"
-          );
-          rt?.addStaticBlock();
-          // Create or update annotation so the server receives the new block
-          setTimeout(() => {
-            store.submitAnnotation();
-          });
-        }}
-      >
-        Static Block
-      </button>
     </div>
   );
 }));

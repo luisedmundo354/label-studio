@@ -19,6 +19,7 @@ import { rangeToGlobalOffset } from "../../../utils/selection-tools";
 import { escapeHtml, isValidObjectURL } from "../../../utils/utilities";
 import ObjectBase from "../Base";
 import DomManager from "./domManager";
+import { guidGenerator } from "../../../utils/unique";
 
 const WARNING_MESSAGES = {
   dataTypeMistmatch: () => "Do not put text directly in task data if you use valueType=url.",
@@ -422,29 +423,102 @@ const Model = types
         return area;
       },
 
-      addStaticBlock() {
-        const prev = self._value || "";
-        const insert = self.type === "text"
-          ? "\n New static block"
-          : "<p> New static block </p>";
-        self.persistLocalValue(prev + insert);
-        self.needsUpdate();
-      },
 
       persistLocalValue(newValue) {
+        // update local model value
         self._value = newValue;
-
+        // if bound to task data ($key), update task.data and push to server
         if (typeof self.value === "string" && self.value.startsWith("$")) {
           const key = self.value.slice(1);
           const task = self.store.task;
           if (task) {
-            task.dataObj[key] = newValue;
-            task.setData(JSON.stringify(task.dataObj));
+            // build new data object rather than mutating existing one
+            const orig = task.dataObj || {};
+            const newDataObj = { ...orig, [key]: newValue };
+            // update MST state
+            task.setData(JSON.stringify(newDataObj));
+            // persist back to server via REST API
+            const host = window.APP_SETTINGS?.hostname || "";
+            const url = `${host.replace(/\/$/,"")}/api/tasks/${task.id}/`;
+            fetch(url, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ data: newDataObj }),
+            }).then(res => {
+              if (!res.ok) console.error("Failed to update task data", res);
+            }).catch(err => console.error(err));
           } else {
             console.warn("Cannot persist value to task data object, because task is not loaded yet");
+            // fallback: update value prop directly
             self.value = newValue;
           }
         }
+      },
+      /**
+       * Remove all inserted static snippets in one go
+       */
+      removeStaticBlocks() {
+        if (typeof self.value === "string" && self.value.startsWith("$")) {
+          // strip out our inserted blocks
+          const cleaned = (self._value || "")
+            .replace(/<p> New static block <\/p>/g, "")
+            .replace(/\n New static block/g, "");
+          self.persistLocalValue(cleaned);
+          self.needsUpdate();
+        }
+      },
+      /**
+       * Insert a static block at the given global-text offset.
+       * Wraps the snippet in a <span> with delete handle, persists to task,
+       * and creates a matching Annotation region tagged with blockId.
+       */
+      /**
+       * Insert a static block at the given global-text offset.
+       * labelOpt overrides the default tool label(s).
+       */
+      addStaticBlockAt(offset, labelOpt) {
+        const id = guidGenerator();
+        const states = self.states() || [];
+        const control = states[0];
+        const label = labelOpt != null ? labelOpt : (control ? control.selectedValues().join(',') : '');
+        const prev = self._value || '';
+        const insert = self.type === 'text'
+          ? `\n<span data-sb-id="${id}" class="static-block" data-sb-label="${label}">New static block <button class="static-block__delete">×</button></span>\n`
+          : `<span data-sb-id="${id}" class="static-block" data-sb-label="${label}">New static block <button class="static-block__delete">×</button></span>`;
+        // codepoint-safe split
+        const chars = Array.from(prev);
+        const before = chars.slice(0, offset).join('');
+        const after = chars.slice(offset).join('');
+        const html = before + insert + after;
+        self.persistLocalValue(html);
+        self.needsUpdate();
+        // after re-render, annotate the new block
+        setTimeout(() => {
+        const container = self.getRootNode();
+          // find the inserted span inside our container
+          const el = container.querySelector(`span.static-block[data-sb-id="${id}"]`);
+          if (!el) return;
+          const range = doc.createRange();
+          range.selectNodeContents(el);
+          const labels = control ? { [control.valueType]: control.selectedValues() } : {};
+          const area = self.annotation.createResult(range, labels, control, self);
+          area.setMetaValue('blockId', id);
+          area.applyHighlight();
+          area.notifyDrawingFinished();
+        }, 0);
+      },
+      /**
+       * Remove a static block (and its region) by blockId.
+       */
+      removeStaticBlockById(id) {
+        // remove matching Annotation region
+        const region = self.annotation.regionStore.regions.find(r => r.area.meta?.blockId === id);
+        if (region) self.annotation.removeResult(region);
+        // scrub only the matching span from HTML
+        const raw = self._value || '';
+        const cleaned = raw.replace(new RegExp(`<span[^>]+data-sb-id="${id}"[\s\S]*?<\\/span>`, 'g'), '');
+        self.persistLocalValue(cleaned);
+        self.needsUpdate();
       },
     };
   });

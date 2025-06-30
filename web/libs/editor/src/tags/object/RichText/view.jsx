@@ -25,6 +25,47 @@ const DBLCLICK_TIMEOUT = 450; // ms
 const DBLCLICK_RANGE = 5; // px
 
 class RichTextPieceView extends Component {
+  /**
+   * Context-menu to insert a new static block with a label
+   */
+  _onContextMenu = (e) => {
+    e.preventDefault();
+    const { item } = this.props;
+    const root = item.getRootNode();
+    const doc = root.contentDocument || root.ownerDocument;
+    let range;
+    if (doc.caretRangeFromPoint) {
+      range = doc.caretRangeFromPoint(e.clientX, e.clientY);
+    } else if (doc.caretPositionFromPoint) {
+      const pos = doc.caretPositionFromPoint(e.clientX, e.clientY);
+      range = doc.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.setEnd(pos.offsetNode, pos.offset);
+    }
+    if (!range) return;
+    const offs = rangeToGlobalOffset(range, root);
+    if (!offs) return;
+    const [offset] = offs;
+    const label = window.prompt('Enter label for new static block');
+    if (label != null) {
+      item.addStaticBlockAt(offset, label);
+    }
+  };
+  /**
+   * Click handler for inline mode: delete button or region click
+   */
+  _onInlineClick = (e) => {
+    // delete static block
+    if (e.target.matches('.static-block__delete')) {
+      e.stopPropagation();
+      const blockEl = e.target.closest('.static-block');
+      if (!blockEl) return;
+      const id = blockEl.getAttribute('data-sb-id');
+      this.props.item.removeStaticBlockById(id);
+      return;
+    }
+    this._onRegionClick(e);
+  };
   _regionSpanSelector = ".htx-highlight";
   _regionVisibleSpanSelector = ".htx-highlight:not(.__hidden)";
 
@@ -58,6 +99,19 @@ class RichTextPieceView extends Component {
       }
       selection.removeAllRanges();
     }
+  };
+  
+  /**
+   * Handle clicks on the delete button inside static-block spans.
+   */
+  _onDeleteClick = (e) => {
+    if (!e.target.matches('.static-block__delete')) return;
+    e.stopPropagation();
+    const btn = e.target;
+    const blockEl = btn.closest('.static-block');
+    if (!blockEl) return;
+    const id = blockEl.getAttribute('data-sb-id');
+    this.props.item.removeStaticBlockById(id);
   };
 
   /****** DRAG-N-DROP EDIT METHODS ******/
@@ -518,12 +572,17 @@ class RichTextPieceView extends Component {
       mouseup: [this._onMouseUp, false],
       mouseover: [this._onRegionMouseOver, true],
     };
+  
 
     if (!body) return;
 
     for (const event in eventHandlers) {
       body.addEventListener(event, ...eventHandlers[event]);
     }
+    // right-click to insert static blocks
+    body.addEventListener('contextmenu', this._onContextMenu, false);
+    // clicks on delete buttons inside static-block spans
+    body.addEventListener('click', this._onDeleteClick, true);
 
     // @todo remove this, project-specific
     // fix unselectable links
@@ -553,27 +612,36 @@ class RichTextPieceView extends Component {
 
     if (!isDefined(item._value)) return null;
 
-    let val = item._value || "";
+    const raw = item._value || "";
+    let val = raw;
     const newLineReplacement = "<br/>";
     const settings = this.props.store.settings;
     const isText = item.type === "text";
 
     if (isText) {
       const cnLine = cn("richtext", { elem: "line" });
-
-      val = htmlEscape(val)
-        .split(/\n|\r/g)
-        .map((s) => `<span class="${cnLine}">${s}</span>`)
-        .join(newLineReplacement);
+      // preserve static-block spans, escape other text
+      const parts = raw.split(/(<span data-sb-id="[^"]+"[\s\S]*?<\/span>)/g);
+      val = parts.map((part) => {
+        if (part.startsWith('<span data-sb-id="')) {
+          return part;
+        }
+        return htmlEscape(part)
+          .split(/\n|\r/g)
+          .map((s) => `<span class="${cnLine}">${s}</span>`)
+          .join(newLineReplacement);
+      }).join(newLineReplacement);
     }
 
     if (item.inline) {
       const eventHandlers = {
-        onClickCapture: this._onRegionClick,
+        onClickCapture: this._onInlineClick,
         onMouseDown: this._onMouseDown,
         onMouseMove: this._onMouseMove,
         onMouseUp: this._onMouseUp,
         onMouseOverCapture: this._onRegionMouseOver,
+        // right-click menu for static blocks
+        onContextMenu: this._onContextMenu,
       };
 
       return (
