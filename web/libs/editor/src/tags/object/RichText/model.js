@@ -478,10 +478,8 @@ const Model = types
        */
       addStaticBlockAt(offset, labelOpt) {
         const id = guidGenerator();
-        const states = self.states() || [];
-        const control = states[0];
-        const label = labelOpt != null ? labelOpt : (control ? control.selectedValues().join(',') : '');
         const prev = self._value || '';
+        const label = typeof labelOpt === 'object' && 'value' in labelOpt ? labelOpt.value : String(labelOpt);
         const insert = self.type === 'text'
           ? `\n<span data-sb-id="${id}" class="static-block" data-sb-label="${label}">New static block <button class="static-block__delete">×</button></span>\n`
           : `<span data-sb-id="${id}" class="static-block" data-sb-label="${label}">New static block <button class="static-block__delete">×</button></span>`;
@@ -491,21 +489,11 @@ const Model = types
         const after = chars.slice(offset).join('');
         const html = before + insert + after;
         self.persistLocalValue(html);
+        // Re-create the DomManager to map spans again
+        self.setLoaded(false);
+        self.setLoaded(true);
         self.needsUpdate();
-        // after re-render, annotate the new block
-        setTimeout(() => {
-        const container = self.getRootNode();
-          // find the inserted span inside our container
-          const el = container.querySelector(`span.static-block[data-sb-id="${id}"]`);
-          if (!el) return;
-          const range = doc.createRange();
-          range.selectNodeContents(el);
-          const labels = control ? { [control.valueType]: control.selectedValues() } : {};
-          const area = self.annotation.createResult(range, labels, control, self);
-          area.setMetaValue('blockId', id);
-          area.applyHighlight();
-          area.notifyDrawingFinished();
-        }, 0);
+        return id;
       },
       /**
        * Remove a static block (and its region) by blockId.

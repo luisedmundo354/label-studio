@@ -79,16 +79,22 @@ export const HighlightMixin = types
     applyHighlight(init = false) {
       // skip re-initialization
       if (self._hasSpans) {
-        return void 0;
+        return;
       }
 
+      // text highlighting: wrap text spans; static blocks produce no spans
       self._spans = self.parent.createSpansByGlobalOffsets(self.globalOffsets);
-      self._spans?.forEach((span) => (span.className = self.classNames.join(" ")));
-      self.updateSpans();
+      if (!self._spans || self._spans.length === 0) {
+        return;
+      }
+      self._spans.forEach((span) => {
+        span.className = self.classNames.join(' ');
+      });
+      this.updateSpans();
       if (!init) {
         self.parent.setStyles({ [self.identifier]: self.styles });
       }
-      return void 0;
+      return;
     },
 
     /**

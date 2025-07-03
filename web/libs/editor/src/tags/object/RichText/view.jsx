@@ -1,6 +1,6 @@
 import { LoadingOutlined } from "@ant-design/icons";
 import * as ff from "@humansignal/core/lib/utils/feature-flags/ff";
-import { observe } from "mobx";
+import {observe, toJS} from "mobx";
 import { inject, observer } from "mobx-react";
 import { isAlive } from "mobx-state-tree";
 import React, { Component } from "react";
@@ -20,38 +20,15 @@ import {
 import { isDefined } from "../../../utils/utilities";
 import "./RichText.scss";
 import {control} from "keymaster";
+import { Menu, Item, Separator, Submenu, useContextMenu, contextMenu } from 'react-contexify';
+import "react-contexify/ReactContexify.css"
 
 const DBLCLICK_TIMEOUT = 450; // ms
 const DBLCLICK_RANGE = 5; // px
+const MENU_ID = "menu-id"
 
 class RichTextPieceView extends Component {
-  /**
-   * Context-menu to insert a new static block with a label
-   */
-  _onContextMenu = (e) => {
-    e.preventDefault();
-    const { item } = this.props;
-    const root = item.getRootNode();
-    const doc = root.contentDocument || root.ownerDocument;
-    let range;
-    if (doc.caretRangeFromPoint) {
-      range = doc.caretRangeFromPoint(e.clientX, e.clientY);
-    } else if (doc.caretPositionFromPoint) {
-      const pos = doc.caretPositionFromPoint(e.clientX, e.clientY);
-      range = doc.createRange();
-      range.setStart(pos.offsetNode, pos.offset);
-      range.setEnd(pos.offsetNode, pos.offset);
-    }
-    if (!range) return;
-    const offs = rangeToGlobalOffset(range, root);
-    if (!offs) return;
-    const [offset] = offs;
-    const label = window.prompt('Enter label for new static block');
-    if (label != null) {
-      item.addStaticBlockAt(offset, label);
-    }
-  };
-  /**
+/**
    * Click handler for inline mode: delete button or region click
    */
   _onInlineClick = (e) => {
@@ -100,7 +77,7 @@ class RichTextPieceView extends Component {
       selection.removeAllRanges();
     }
   };
-  
+
   /**
    * Handle clicks on the delete button inside static-block spans.
    */
@@ -112,6 +89,113 @@ class RichTextPieceView extends Component {
     if (!blockEl) return;
     const id = blockEl.getAttribute('data-sb-id');
     this.props.item.removeStaticBlockById(id);
+  };
+
+  /**
+   * Insert a new static block, persist it, then re-highlight everything.
+   *
+   * @param {MouseEvent} e
+   * @param {{ control: any, x: number, y: number }} data
+   */
+  _onStaticBlockMenuClick = ( { event, props, data}) => {
+    event.preventDefault();
+
+    const { clickX: x, clickY: y } = props;
+    const { item }   = this.props;
+    const rootEl     = item.mountNodeRef.current;
+    const doc        = rootEl.contentDocument ?? rootEl.ownerDocument;
+    const label = typeof data === "object" && "value" in data ? data.value : data;
+    let   range;
+
+    // 1) find the caret-based range at the click point
+    if (doc.caretRangeFromPoint) {
+      range = doc.caretRangeFromPoint(x, y);
+    } else if (doc.caretPositionFromPoint) {
+      const pos = doc.caretPositionFromPoint(x, y);
+      range = doc.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.setEnd(pos.offsetNode, pos.offset);
+    }
+    if (!range) {
+      return;
+    } else {
+      console.log('range', range);
+    }
+    if (!label) {
+      return;
+    } else {
+      console.log('label', label);
+    }
+    // 2) normalize code-points (optional, but recommended)
+    fixCodePointsInRange(range);
+
+    // 3) turn that collapsed range into a single global offset
+    const [offset] = rangeToGlobalOffset(range, rootEl);
+
+    // 4) hand off to the model—we pass `data.value` (your menu item’s label) as an override
+    const blockId = item.addStaticBlockAt(offset, label);
+
+    // after re-render, annotate the new block
+    setTimeout(() => {
+      const root = rootEl?.contentDocument?.body ?? rootEl;
+      const span = root.querySelector(`[data-sb-id="${blockId}"]`);
+          if (!span) {
+            console.log('no span');
+            return;
+          } else {
+            console.log('span', span);
+          }
+          const newRange = doc.createRange();
+          newRange.selectNode(span);
+          const normedRange = xpath.fromRange(newRange, root);
+          if (!normedRange) {
+            return;
+          } else {
+            console.log('normed', normedRange);
+          }
+
+          normedRange._range = newRange;
+          normedRange.isText = item.type === "text";
+
+          const control = item.states()[0];
+          control.unselectAll();
+          const labelState = control.children.find((c) => c.value === label);
+          labelState.toggleSelected(true);
+
+      const region = item.addRegion(normedRange, { value: [label]});
+      if (blockId && region?.results?.[0]) {
+        region.results?.[0]?.setMetaValue('blockId', blockId);
+      } else {
+        console.log('no blockId', blockId, 'no region', region?.results?.[0]);
+      }
+      // manually highlight the static-block span
+      const spanEl = root.querySelector(`.static-block[data-sb-id="${blockId}"]`);
+      if (spanEl) {
+        spanEl.classList.add('htx-highlight', STATE_CLASS_MODS.active);
+      }
+      }, 0);
+  };
+
+  /**
+   * Inline right-click: show React menu so user picks a label
+   * @param {MouseEvent} e
+   */
+  displayMenu = (e) => {
+    e.preventDefault();
+    const {item} = this.props;
+    const controls = toJS(item.states());
+    const choices = controls[0]?.children ?? [];
+    console.log('menu id up inline', MENU_ID);
+    console.log(choices);
+    contextMenu.show({
+      id: MENU_ID,
+      event: e,
+      props: {
+        clickX: e.clientX,
+        clickY: e.clientY,
+        choices,
+      },
+    });
   };
 
   /****** DRAG-N-DROP EDIT METHODS ******/
@@ -412,7 +496,7 @@ class RichTextPieceView extends Component {
 
   /**
    *
-   * Click-handler method for new textRegion instances
+   * Click-handler method for new textRegion instances. Not used but working if needed
    */
 
   _onAddStaticBlockClick = (ev) => {
@@ -572,17 +656,18 @@ class RichTextPieceView extends Component {
       mouseup: [this._onMouseUp, false],
       mouseover: [this._onRegionMouseOver, true],
     };
-  
+
 
     if (!body) return;
 
     for (const event in eventHandlers) {
       body.addEventListener(event, ...eventHandlers[event]);
     }
-    // right-click to insert static blocks
-    body.addEventListener('contextmenu', this._onContextMenu, false);
+    // right-click to show context menu and insert static blocks
+    // Delegate right-click inside iframe to display context menu
+    body.addEventListener('contextmenu', this.displayMenu, false);
     // clicks on delete buttons inside static-block spans
-    body.addEventListener('click', this._onDeleteClick, true);
+    // body.addEventListener('click', this._onDeleteClick, true);
 
     // @todo remove this, project-specific
     // fix unselectable links
@@ -617,6 +702,9 @@ class RichTextPieceView extends Component {
     const newLineReplacement = "<br/>";
     const settings = this.props.store.settings;
     const isText = item.type === "text";
+    console.log('menu id bottom', MENU_ID);
+    const controls = toJS(item.states());
+    const choices = controls[0]?.children ?? [];
 
     if (isText) {
       const cnLine = cn("richtext", { elem: "line" });
@@ -640,30 +728,47 @@ class RichTextPieceView extends Component {
         onMouseMove: this._onMouseMove,
         onMouseUp: this._onMouseUp,
         onMouseOverCapture: this._onRegionMouseOver,
-        // right-click menu for static blocks
-        onContextMenu: this._onContextMenu,
+        onContextMenu: this.displayMenu,
       };
 
       return (
         <Block name="richtext" tag={ObjectTag} item={item}>
           <Elem
-            key="root"
-            name="container"
-            mod={{ canResizeSpans: ff.isActive(ff.FF_ADJUSTABLE_SPANS) }}
-            ref={(el) => {
-              item.mountNodeRef.current = el;
-              el && this.markObjectAsLoaded();
-            }}
-            data-linenumbers={isText && settings.showLineNumbers ? "enabled" : "disabled"}
-            className="htx-richtext"
-            dangerouslySetInnerHTML={{ __html: val }}
+              key="root"
+              name="container"
+              mod={{ canResizeSpans: ff.isActive(ff.FF_ADJUSTABLE_SPANS) }}
+              ref={(el) => {
+                item.mountNodeRef.current = el;
+                el && this.markObjectAsLoaded();
+              }}
+              data-linenumbers={isText && settings.showLineNumbers ? "enabled" : "disabled"}
+              className="htx-richtext"
+              dangerouslySetInnerHTML={{ __html: val }}
             {...eventHandlers}
-          />
+            />
+          <Menu
+            id = { MENU_ID }
+            onShown={() => console.log('Menu shown')}
+          >
+            {choices.map(c => (
+            <Item
+                key={c.value}
+                data={c}
+                onClick={({ event, props }) => {
+                  this._onStaticBlockMenuClick({event, props, data:c.value});
+                }}
+            >
+              {c.value}
+            </Item>
+      ))}
+          </Menu>
         </Block>
       );
+    } else {
+      console.log('render iframe');
     }
     return (
-      <Block name="richtext" tag={ObjectTag} item={item}>
+        <Block name="richtext" tag={ObjectTag} item={item}>
         <Elem name="loading" ref={this.loadingRef}>
           <LoadingOutlined />
         </Elem>
@@ -682,7 +787,26 @@ class RichTextPieceView extends Component {
           srcDoc={val}
           onLoad={this.onIFrameLoad}
         />
-      </Block>
+        <Menu
+          id={MENU_ID}
+          onShown={() => console.log('Menu shown')}
+        >
+          {({ props }) =>
+            (props?.choices ?? []).map(c => (
+              <Item
+                key={c.value}
+                data={{
+                  x: props.clickX,
+                  y: props.clickY,
+                  control: c }}
+                onClick={this._onStaticBlockMenuClick}
+              >
+                {c.value}
+              </Item>
+            ))
+          }
+        </Menu>
+        </Block>
     );
   }
 }
