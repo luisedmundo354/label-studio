@@ -471,7 +471,7 @@ const Model = types
         const prev = self._value || '';
         const label = typeof labelOpt === 'object' && 'value' in labelOpt ? labelOpt.value : String(labelOpt);
         // inject only raw text plus a hidden [blockId] marker
-        const insert = `\nNew static block [${id}]\n`;
+        const insert = `\nImplicit Intermediate Conclusion [${id}]\n`;
         // before splitting raw HTML, shift all existing regions so highlights stay in place
         // `insert` is the HTML snippet to add; its codepoint length determines shift
         const insertLength = Array.from(insert).length;
