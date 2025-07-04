@@ -432,7 +432,8 @@ const Model = types
           const key = self.value.slice(1);
           const task = self.store.task;
           if (task) {
-            // build new data object rather than mutating existing one
+            console.log("persistLocalValue", key, newValue);
+            // build new data object
             const orig = task.dataObj || {};
             const newDataObj = { ...orig, [key]: newValue };
             // update MST state
@@ -440,6 +441,7 @@ const Model = types
             // persist back to server via REST API
             const host = window.APP_SETTINGS?.hostname || "";
             const url = `${host.replace(/\/$/,"")}/api/tasks/${task.id}/`;
+            console.log("persistLocalValue", url, newDataObj);
             fetch(url, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
@@ -454,19 +456,7 @@ const Model = types
           }
         }
       },
-      /**
-       * Remove all inserted static snippets in one go
-       */
-      removeStaticBlocks() {
-        if (typeof self.value === "string" && self.value.startsWith("$")) {
-          // strip out our inserted blocks
-          const cleaned = (self._value || "")
-            .replace(/<p> New static block <\/p>/g, "")
-            .replace(/\n New static block/g, "");
-          self.persistLocalValue(cleaned);
-          self.needsUpdate();
-        }
-      },
+
       /**
        * Insert a static block at the given global-text offset.
        * Wraps the snippet in a <span> with delete handle, persists to task,
@@ -480,33 +470,38 @@ const Model = types
         const id = guidGenerator();
         const prev = self._value || '';
         const label = typeof labelOpt === 'object' && 'value' in labelOpt ? labelOpt.value : String(labelOpt);
-        const insert = self.type === 'text'
-          ? `\n<span data-sb-id="${id}" class="static-block" data-sb-label="${label}">New static block <button class="static-block__delete">×</button></span>\n`
-          : `<span data-sb-id="${id}" class="static-block" data-sb-label="${label}">New static block <button class="static-block__delete">×</button></span>`;
-        // codepoint-safe split
+        // inject only raw text plus a hidden [blockId] marker
+        const insert = `\nNew static block X[${id}]\n`;
+        // before splitting raw HTML, shift all existing regions so highlights stay in place
+        // `insert` is the HTML snippet to add; its codepoint length determines shift
+        const insertLength = Array.from(insert).length;
+        self.regs.forEach(region => {
+          const go = region.globalOffsets;
+          if (!go) return;
+          let { start: rs, end: re } = go;
+          // bump offsets for regions at/after insert point
+          if (rs >= offset) rs += insertLength;
+          if (re >= offset) re += insertLength;
+          region.updateGlobalOffsets(rs, re);
+          // also adjust text-region start/end if applicable
+          if (region.isText) {
+            let so = region.startOffset || 0;
+            let eo = region.endOffset || 0;
+            if (so >= offset) so += insertLength;
+            if (eo >= offset) eo += insertLength;
+            region.updateTextOffsets(so, eo);
+          }
+        });
+        // codepoint-safe split of raw value
         const chars = Array.from(prev);
         const before = chars.slice(0, offset).join('');
-        const after = chars.slice(offset).join('');
-        const html = before + insert + after;
-        self.persistLocalValue(html);
-        // Re-create the DomManager to map spans again
+        const after  = chars.slice(offset).join('');
+        self.persistLocalValue(before + insert + after);
+
         self.setLoaded(false);
         self.setLoaded(true);
         self.needsUpdate();
         return id;
-      },
-      /**
-       * Remove a static block (and its region) by blockId.
-       */
-      removeStaticBlockById(id) {
-        // remove matching Annotation region
-        const region = self.annotation.regionStore.regions.find(r => r.area.meta?.blockId === id);
-        if (region) self.annotation.removeResult(region);
-        // scrub only the matching span from HTML
-        const raw = self._value || '';
-        const cleaned = raw.replace(new RegExp(`<span[^>]+data-sb-id="${id}"[\s\S]*?<\\/span>`, 'g'), '');
-        self.persistLocalValue(cleaned);
-        self.needsUpdate();
       },
     };
   });

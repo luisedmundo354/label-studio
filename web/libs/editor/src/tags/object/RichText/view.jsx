@@ -28,21 +28,6 @@ const DBLCLICK_RANGE = 5; // px
 const MENU_ID = "menu-id"
 
 class RichTextPieceView extends Component {
-/**
-   * Click handler for inline mode: delete button or region click
-   */
-  _onInlineClick = (e) => {
-    // delete static block
-    if (e.target.matches('.static-block__delete')) {
-      e.stopPropagation();
-      const blockEl = e.target.closest('.static-block');
-      if (!blockEl) return;
-      const id = blockEl.getAttribute('data-sb-id');
-      this.props.item.removeStaticBlockById(id);
-      return;
-    }
-    this._onRegionClick(e);
-  };
   _regionSpanSelector = ".htx-highlight";
   _regionVisibleSpanSelector = ".htx-highlight:not(.__hidden)";
 
@@ -76,19 +61,6 @@ class RichTextPieceView extends Component {
       }
       selection.removeAllRanges();
     }
-  };
-
-  /**
-   * Handle clicks on the delete button inside static-block spans.
-   */
-  _onDeleteClick = (e) => {
-    if (!e.target.matches('.static-block__delete')) return;
-    e.stopPropagation();
-    const btn = e.target;
-    const blockEl = btn.closest('.static-block');
-    if (!blockEl) return;
-    const id = blockEl.getAttribute('data-sb-id');
-    this.props.item.removeStaticBlockById(id);
   };
 
   /**
@@ -126,36 +98,58 @@ class RichTextPieceView extends Component {
     } else {
       console.log('label', label);
     }
-    // 2) normalize code-points (optional, but recommended)
+    // normalize code-points (optional, but recommended)
     fixCodePointsInRange(range);
 
-    // 3) turn that collapsed range into a single global offset
+    // turn that collapsed range into a single global offset
     const [offset] = rangeToGlobalOffset(range, rootEl);
 
-    // 4) hand off to the model—we pass `data.value` (your menu item’s label) as an override
+    // hand off to the model—we pass `data.value`
     const blockId = item.addStaticBlockAt(offset, label);
+    console.log('blockId', blockId);
 
     // after re-render, annotate the new block
     setTimeout(() => {
       const root = rootEl?.contentDocument?.body ?? rootEl;
-      const span = root.querySelector(`[data-sb-id="${blockId}"]`);
+      // find the highlight span for this block
+      // first try the attribute-based selector (static-block spans decorated in HighlightMixin)
+      let span = root.querySelector(`span.static-block[data-sb-id="${blockId}"]`);
+      // fallback: look for any span whose textContent contains the blockId marker
+      if (!span) {
+        span = Array.from(root.querySelectorAll('span')).find(el =>
+          el.textContent && el.textContent.includes(blockId)
+        );
+      }
           if (!span) {
             console.log('no span');
             return;
           } else {
             console.log('span', span);
           }
+
           const newRange = doc.createRange();
-          newRange.selectNode(span);
+          // build a Range covering the span’s text; if no text nodes, fall back to element
+          const childNodes = Array.from(span.childNodes);
+          const startNode = childNodes.find((n) => n.nodeType === Node.TEXT_NODE);
+          const endNode = childNodes.slice().reverse().find((n) => n.nodeType === Node.TEXT_NODE);
+          if (startNode && endNode) {
+            newRange.setStart(startNode, 0);
+            newRange.setEnd(endNode, endNode.textContent.length);
+          } else {
+            newRange.selectNodeContents(span);
+          }
           const normedRange = xpath.fromRange(newRange, root);
           if (!normedRange) {
             return;
           } else {
             console.log('normed', normedRange);
+            console.log('New', newRange);
           }
 
-          normedRange._range = newRange;
-          normedRange.isText = item.type === "text";
+      // Associate the actual DOM Range and text with the normalized range
+      normedRange._range = newRange;
+      normedRange.text  = span.textContent;
+      normedRange.isText = item.type === "text";
 
           const control = item.states()[0];
           control.unselectAll();
@@ -165,15 +159,12 @@ class RichTextPieceView extends Component {
       const region = item.addRegion(normedRange, { value: [label]});
       if (blockId && region?.results?.[0]) {
         region.results?.[0]?.setMetaValue('blockId', blockId);
+        region.updateAppearenceFromState();
       } else {
         console.log('no blockId', blockId, 'no region', region?.results?.[0]);
       }
-      // manually highlight the static-block span
-      const spanEl = root.querySelector(`.static-block[data-sb-id="${blockId}"]`);
-      if (spanEl) {
-        spanEl.classList.add('htx-highlight', STATE_CLASS_MODS.active);
-      }
       }, 0);
+
   };
 
   /**
@@ -495,24 +486,6 @@ class RichTextPieceView extends Component {
   };
 
   /**
-   *
-   * Click-handler method for new textRegion instances. Not used but working if needed
-   */
-
-  _onAddStaticBlockClick = (ev) => {
-    ev.stopPropagation();
-    const { item } = this.props;
-    // append a new block of text or HTML to the existing content
-    const current = item._value || "";
-    const insert = item.type === "text"
-      ? "\nNew static text block"
-      : "<p>New static HTML block</p>";
-    item.updateLocalValue(current + insert);
-    // re-render and apply all highlights to updated content
-    item.needsUpdate();
-  };
-
-  /**
    * @param {MouseEvent} event
    */
   _onRegionClick = (event) => {
@@ -657,7 +630,6 @@ class RichTextPieceView extends Component {
       mouseover: [this._onRegionMouseOver, true],
     };
 
-
     if (!body) return;
 
     for (const event in eventHandlers) {
@@ -723,7 +695,7 @@ class RichTextPieceView extends Component {
 
     if (item.inline) {
       const eventHandlers = {
-        onClickCapture: this._onInlineClick,
+        onClickCapture: this._onRegionClick,
         onMouseDown: this._onMouseDown,
         onMouseMove: this._onMouseMove,
         onMouseUp: this._onMouseUp,
@@ -764,11 +736,9 @@ class RichTextPieceView extends Component {
           </Menu>
         </Block>
       );
-    } else {
-      console.log('render iframe');
     }
     return (
-        <Block name="richtext" tag={ObjectTag} item={item}>
+      <Block name="richtext" tag={ObjectTag} item={item}>
         <Elem name="loading" ref={this.loadingRef}>
           <LoadingOutlined />
         </Elem>
@@ -788,24 +758,21 @@ class RichTextPieceView extends Component {
           onLoad={this.onIFrameLoad}
         />
         <Menu
-          id={MENU_ID}
-          onShown={() => console.log('Menu shown')}
-        >
-          {({ props }) =>
-            (props?.choices ?? []).map(c => (
-              <Item
+            id = { MENU_ID }
+            onShown={() => console.log('Menu shown')}
+          >
+            {choices.map(c => (
+            <Item
                 key={c.value}
-                data={{
-                  x: props.clickX,
-                  y: props.clickY,
-                  control: c }}
-                onClick={this._onStaticBlockMenuClick}
-              >
-                {c.value}
-              </Item>
-            ))
-          }
-        </Menu>
+                data={c}
+                onClick={({ event, props }) => {
+                  this._onStaticBlockMenuClick({event, props, data:c.value});
+                }}
+            >
+              {c.value}
+            </Item>
+      ))}
+          </Menu>
         </Block>
     );
   }

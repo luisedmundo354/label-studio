@@ -1,4 +1,4 @@
-import { inject, observer } from "mobx-react";
+import { observer } from "mobx-react";
 import { types } from "mobx-state-tree";
 
 import Registry from "../../core/Registry";
@@ -6,8 +6,6 @@ import Tree from "../../core/Tree";
 import Types from "../../core/Types";
 import VisibilityMixin from "../../mixins/Visibility";
 import { AnnotationMixin } from "../../mixins/AnnotationMixin";
-
-import "./View.scss";
 
 /**
  * The `View` element is used to configure the display of blocks, similar to the div tag in HTML.
@@ -135,7 +133,7 @@ const Model = types
 
 const ViewModel = types.compose("ViewModel", TagAttrs, Model, VisibilityMixin, AnnotationMixin);
 
-const HtxView = inject("store")(observer(({ item, store }) => {
+const HtxView = observer(({ item }) => {
   let style = {};
 
   if (item.display === "inline") {
@@ -155,7 +153,7 @@ const HtxView = inject("store")(observer(({ item, store }) => {
       {Tree.renderChildren(item, item.annotation)}
     </div>
   );
-}));
+});
 
 Registry.addTag("view", ViewModel, HtxView);
 

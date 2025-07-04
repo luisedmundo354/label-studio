@@ -79,22 +79,16 @@ export const HighlightMixin = types
     applyHighlight(init = false) {
       // skip re-initialization
       if (self._hasSpans) {
-        return;
+        return void 0;
       }
 
-      // text highlighting: wrap text spans; static blocks produce no spans
       self._spans = self.parent.createSpansByGlobalOffsets(self.globalOffsets);
-      if (!self._spans || self._spans.length === 0) {
-        return;
-      }
-      self._spans.forEach((span) => {
-        span.className = self.classNames.join(' ');
-      });
-      this.updateSpans();
+      self._spans?.forEach((span) => (span.className = self.classNames.join(" ")));
+      self.updateSpans();
       if (!init) {
         self.parent.setStyles({ [self.identifier]: self.styles });
       }
-      return;
+      return void 0;
     },
 
     /**
@@ -123,6 +117,45 @@ export const HighlightMixin = types
         // store offsets in spans for further comparison if region got resized
         firstSpan.setAttribute("data-start", offsets.start);
         lastSpan.setAttribute("data-end", offsets.end);
+        // decorate static-block spans: replace marker with label and wrap delete 'X'
+        const result = self.results?.[0];
+        const blockId = result?.meta?.blockId;
+        if (blockId) {
+          // compute label string of max 12 chars
+          let labelStr = self.getLabels();
+          if (labelStr.length > 12) {
+            labelStr = labelStr.split(/\W+/).map(w=>w[0]?.toUpperCase()||'').join('');
+            if (labelStr.length > 12) labelStr = labelStr.slice(0,12);
+            else labelStr = labelStr.padEnd(12,' ');
+          } else {
+            labelStr = labelStr.padEnd(12,' ');
+          }
+          // find marker in text node
+          const tn = Array.from(lastSpan.childNodes).find(
+            n => n.nodeType===Node.TEXT_NODE && n.textContent.includes(`[${blockId}]`)
+          );
+          if (tn) {
+            const updated = tn.textContent.replace(`[${blockId}]`, labelStr);
+            lastSpan.textContent = updated;
+            lastSpan.classList.add('static-block');
+            lastSpan.setAttribute('data-sb-id', blockId);
+            lastSpan.setAttribute('data-sb-label', self.getLabels());
+            // wrap the 'X' delete marker in a button
+            const idx = updated.lastIndexOf('X');
+            if (idx !== -1) {
+              const doc = lastSpan.ownerDocument;
+              const before = updated.slice(0, idx);
+              const after  = updated.slice(idx+1);
+              lastSpan.textContent = '';
+              lastSpan.appendChild(doc.createTextNode(before));
+              const btn = doc.createElement('button');
+              btn.className = 'static-block__delete';
+              btn.textContent = 'X';
+              lastSpan.appendChild(btn);
+              lastSpan.appendChild(doc.createTextNode(after));
+            }
+          }
+        }
       }
     },
 
