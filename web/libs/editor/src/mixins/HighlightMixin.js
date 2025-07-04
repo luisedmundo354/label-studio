@@ -145,14 +145,12 @@ export const HighlightMixin = types
             if (idx !== -1) {
               const doc = lastSpan.ownerDocument;
               const before = updated.slice(0, idx);
-              const after  = updated.slice(idx+1);
               lastSpan.textContent = '';
               lastSpan.appendChild(doc.createTextNode(before));
               const btn = doc.createElement('button');
               btn.className = 'static-block__delete';
               btn.textContent = 'X';
               lastSpan.appendChild(btn);
-              lastSpan.appendChild(doc.createTextNode(after));
             }
           }
         }

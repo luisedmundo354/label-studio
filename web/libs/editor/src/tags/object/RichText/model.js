@@ -471,7 +471,7 @@ const Model = types
         const prev = self._value || '';
         const label = typeof labelOpt === 'object' && 'value' in labelOpt ? labelOpt.value : String(labelOpt);
         // inject only raw text plus a hidden [blockId] marker
-        const insert = `\nNew static block X[${id}]\n`;
+        const insert = `\nNew static block [${id}]\n`;
         // before splitting raw HTML, shift all existing regions so highlights stay in place
         // `insert` is the HTML snippet to add; its codepoint length determines shift
         const insertLength = Array.from(insert).length;
@@ -502,6 +502,48 @@ const Model = types
         self.setLoaded(true);
         self.needsUpdate();
         return id;
+      },
+      /**
+       * Remove a static block by its blockId: delete the region, remove its text,
+       * shift other regions, delete relations, and re-highlight.
+       */
+      removeStaticBlock(blockId) {
+        // find the region matching this blockId
+        const region = self.regs.find(r => r.results?.[0]?.meta?.blockId === blockId);
+        if (!region) {
+          return;
+        } else {
+          console.log("removeStaticBlock", blockId, region);
+        }
+        // remove block text from raw value
+        const prev = self._value || '';
+        const chars = Array.from(prev);
+        const { start, end } = region.globalOffsets;
+        const before = chars.slice(0, start).join('');
+        const after  = chars.slice(end).join('');
+        self.persistLocalValue(before + after);
+        // compute removed length
+        const removed = end - start;
+        // shift other regions
+        self.regs.forEach(r => {
+          if (r === region) return;
+          const go = r.globalOffsets;
+          if (!go) return;
+          let rs = go.start, re = go.end;
+          if (rs >= end) rs -= removed; else if (rs > start) rs = start;
+          if (re >= end) re -= removed; else if (re > start) re = start;
+          r.updateGlobalOffsets(rs, re);
+          if (r.isText) {
+            let so = r.startOffset, eo = r.endOffset;
+            if (so >= end) so -= removed; else if (so > start) so = start;
+            if (eo >= end) eo -= removed; else if (eo > start) eo = start;
+            r.updateTextOffsets(so, eo);
+          }
+        });
+        // refresh highlights
+        self.setLoaded(false);
+        self.setLoaded(true);
+        self.needsUpdate();
       },
     };
   });
