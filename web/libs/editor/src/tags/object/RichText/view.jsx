@@ -19,7 +19,6 @@ import {
 } from "../../../utils/selection-tools";
 import { isDefined } from "../../../utils/utilities";
 import "./RichText.scss";
-import {control} from "keymaster";
 import { Menu, Item, Separator, Submenu, useContextMenu, contextMenu } from 'react-contexify';
 import "react-contexify/ReactContexify.css"
 
@@ -160,6 +159,8 @@ class RichTextPieceView extends Component {
       if (blockId && region?.results?.[0]) {
         region.results?.[0]?.setMetaValue('blockId', blockId);
         region.updateAppearenceFromState();
+        const ann = this.props.item.annotation;
+        ann.saveDraftImmediately();
       } else {
         console.log('no blockId', blockId, 'no region', region?.results?.[0]);
       }
@@ -635,11 +636,6 @@ class RichTextPieceView extends Component {
     for (const event in eventHandlers) {
       body.addEventListener(event, ...eventHandlers[event]);
     }
-    // right-click to show context menu and insert static blocks
-    // Delegate right-click inside iframe to display context menu
-    body.addEventListener('contextmenu', this.displayMenu, false);
-    // clicks on delete buttons inside static-block spans
-    // body.addEventListener('click', this._onDeleteClick, true);
 
     // @todo remove this, project-specific
     // fix unselectable links
@@ -669,28 +665,22 @@ class RichTextPieceView extends Component {
 
     if (!isDefined(item._value)) return null;
 
-    const raw = item._value || "";
-    let val = raw;
+    let val = item._value || "";
     const newLineReplacement = "<br/>";
     const settings = this.props.store.settings;
     const isText = item.type === "text";
     console.log('menu id bottom', MENU_ID);
-    const controls = toJS(item.states());
-    const choices = controls[0]?.children ?? [];
+    const controls = item.states();
+    const allLabels = controls[0]?.children ?? [];
+    const choices = allLabels.filter(label => label.value === 'Rule' || label.value === 'Analysis');
 
     if (isText) {
       const cnLine = cn("richtext", { elem: "line" });
-      // preserve static-block spans, escape other text
-      const parts = raw.split(/(<span data-sb-id="[^"]+"[\s\S]*?<\/span>)/g);
-      val = parts.map((part) => {
-        if (part.startsWith('<span data-sb-id="')) {
-          return part;
-        }
-        return htmlEscape(part)
-          .split(/\n|\r/g)
-          .map((s) => `<span class="${cnLine}">${s}</span>`)
-          .join(newLineReplacement);
-      }).join(newLineReplacement);
+
+      val = htmlEscape(val)
+        .split(/\n|\r/g)
+        .map((s) => `<span class="${cnLine}">${s}</span>`)
+        .join(newLineReplacement);
     }
 
     if (item.inline) {
@@ -704,37 +694,40 @@ class RichTextPieceView extends Component {
       };
 
       return (
+        <>
         <Block name="richtext" tag={ObjectTag} item={item}>
           <Elem
-              key="root"
-              name="container"
-              mod={{ canResizeSpans: ff.isActive(ff.FF_ADJUSTABLE_SPANS) }}
-              ref={(el) => {
-                item.mountNodeRef.current = el;
-                el && this.markObjectAsLoaded();
-              }}
-              data-linenumbers={isText && settings.showLineNumbers ? "enabled" : "disabled"}
-              className="htx-richtext"
-              dangerouslySetInnerHTML={{ __html: val }}
+            key="root"
+            name="container"
+            mod={{ canResizeSpans: ff.isActive(ff.FF_ADJUSTABLE_SPANS) }}
+            ref={(el) => {
+              item.mountNodeRef.current = el;
+              el && this.markObjectAsLoaded();
+            }}
+            data-linenumbers={isText && settings.showLineNumbers ? "enabled" : "disabled"}
+            className="htx-richtext"
+            dangerouslySetInnerHTML={{ __html: val }}
             {...eventHandlers}
-            />
+          />
+        </Block>
           <Menu
             id = { MENU_ID }
-            onShown={() => console.log('Menu shown')}
+            container={document.body}
           >
             {choices.map(c => (
-            <Item
+              <Item
                 key={c.value}
                 data={c}
                 onClick={({ event, props }) => {
                   this._onStaticBlockMenuClick({event, props, data:c.value});
                 }}
-            >
-              {c.value}
-            </Item>
-      ))}
+              >
+                {c.value}
+              </Item>
+            ))}
           </Menu>
-        </Block>
+
+        </>
       );
     }
     return (
@@ -757,23 +750,7 @@ class RichTextPieceView extends Component {
           srcDoc={val}
           onLoad={this.onIFrameLoad}
         />
-        <Menu
-            id = { MENU_ID }
-            onShown={() => console.log('Menu shown')}
-          >
-            {choices.map(c => (
-            <Item
-                key={c.value}
-                data={c}
-                onClick={({ event, props }) => {
-                  this._onStaticBlockMenuClick({event, props, data:c.value});
-                }}
-            >
-              {c.value}
-            </Item>
-      ))}
-          </Menu>
-        </Block>
+      </Block>
     );
   }
 }

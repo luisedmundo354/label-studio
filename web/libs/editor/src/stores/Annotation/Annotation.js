@@ -586,10 +586,6 @@ const _Annotation = types
      */
     deleteRegion(region) {
       if (region.isReadOnly()) return;
-      // clear any selection to remove lingering highlights before deletion
-      if (self.selectionSize) {
-        self.unselectAreas();
-      }
 
       const { regions } = self.regionStore;
       // move all children into the parent region of the given one
@@ -614,11 +610,9 @@ const _Annotation = types
 
       destroy(region);
 
-      // If the annotation was in a drawing state and the user deletes it, reset the drawing state
-      // to avoid the user being stuck in a drawing state, then refresh all objects to clear highlights
+      // If the annotation was in a drawing state and the user deletes it, we need to reset the drawing state
+      // to avoid the user being stuck in a drawing state
       self.setIsDrawing(false);
-      // Refresh views (e.g., rich-text spans) to remove lingering highlights
-      self.updateObjects();
     },
 
     deleteArea(area) {

@@ -167,14 +167,6 @@ export const AreaMixinBase = types
   }))
   .actions((self) => ({
     beforeDestroy() {
-      // remove any text highlights (spans and styles) before region is destroyed
-      if (typeof self.removeHighlight === 'function') {
-        try {
-          self.removeHighlight();
-        } catch (e) {
-          console.warn('Error in removeHighlight during beforeDestroy:', e);
-        }
-      }
       self.results.forEach((r) => destroy(r));
 
       // Some region indexes have to be recalculated after destroying regions
