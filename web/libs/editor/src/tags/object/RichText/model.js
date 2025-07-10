@@ -1,5 +1,5 @@
 import * as ff from "@humansignal/core/lib/utils/feature-flags/ff";
-import { destroy as destroyNode, flow, types, getRoot } from "mobx-state-tree";
+import { destroy as destroyNode, flow, types } from "mobx-state-tree";
 import { createRef } from "react";
 import Constants from "../../../core/Constants";
 import { customTypes } from "../../../core/CustomTypes";
@@ -20,7 +20,6 @@ import { escapeHtml, isValidObjectURL } from "../../../utils/utilities";
 import ObjectBase from "../Base";
 import DomManager from "./domManager";
 import { guidGenerator } from "../../../utils/unique";
-import { getRoot } from "mobx-state-tree";
 
 const WARNING_MESSAGES = {
   dataTypeMistmatch: () => "Do not put text directly in task data if you use valueType=url.",
@@ -555,7 +554,7 @@ const Model = types
         self.setLoaded(false);
         self.setLoaded(true);
         self.needsUpdate();
-
+        // self.annotation.saveDraftImmediately();
       },
     };
   });
