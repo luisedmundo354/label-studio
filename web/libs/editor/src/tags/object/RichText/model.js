@@ -20,6 +20,7 @@ import { escapeHtml, isValidObjectURL } from "../../../utils/utilities";
 import ObjectBase from "../Base";
 import DomManager from "./domManager";
 import { guidGenerator } from "../../../utils/unique";
+import { getRoot } from "mobx-state-tree";
 
 const WARNING_MESSAGES = {
   dataTypeMistmatch: () => "Do not put text directly in task data if you use valueType=url.",
@@ -515,28 +516,38 @@ const Model = types
         } else {
           console.log("removeStaticBlock", blockId, region);
         }
-        // remove block text from raw value
+        // remove block text (and any adjacent newline) from raw value
         const prev = self._value || '';
         const chars = Array.from(prev);
         const { start, end } = region.globalOffsets;
-        const before = chars.slice(0, start).join('');
-        const after  = chars.slice(end).join('');
+        let startIdx = start;
+        let endIdx = end;
+        // drop preceding newline if present
+        if (startIdx > 0 && (chars[startIdx - 1] === '\n' || chars[startIdx - 1] === '\r')) {
+          startIdx -= 1;
+        }
+        // drop following newline if present
+        if (endIdx < chars.length && (chars[endIdx] === '\n' || chars[endIdx] === '\r')) {
+          endIdx += 1;
+        }
+        const before = chars.slice(0, startIdx).join('');
+        const after  = chars.slice(endIdx).join('');
         self.persistLocalValue(before + after);
-        // compute removed length
-        const removed = end - start;
+        // compute number of removed characters
+        const removed = endIdx - startIdx;
         // shift other regions
         self.regs.forEach(r => {
           if (r === region) return;
           const go = r.globalOffsets;
           if (!go) return;
           let rs = go.start, re = go.end;
-          if (rs >= end) rs -= removed; else if (rs > start) rs = start;
-          if (re >= end) re -= removed; else if (re > start) re = start;
+          if (rs >= endIdx) rs -= removed; else if (rs > startIdx) rs = startIdx;
+          if (re >= endIdx) re -= removed; else if (re > startIdx) re = startIdx;
           r.updateGlobalOffsets(rs, re);
           if (r.isText) {
             let so = r.startOffset, eo = r.endOffset;
-            if (so >= end) so -= removed; else if (so > start) so = start;
-            if (eo >= end) eo -= removed; else if (eo > start) eo = start;
+            if (so >= endIdx) so -= removed; else if (so > startIdx) so = startIdx;
+            if (eo >= endIdx) eo -= removed; else if (eo > startIdx) eo = startIdx;
             r.updateTextOffsets(so, eo);
           }
         });
@@ -544,6 +555,8 @@ const Model = types
         self.setLoaded(false);
         self.setLoaded(true);
         self.needsUpdate();
+        // self.annotation.saveDraftImmediately();
+        getRoot(self).updateAnnotation();
       },
     };
   });

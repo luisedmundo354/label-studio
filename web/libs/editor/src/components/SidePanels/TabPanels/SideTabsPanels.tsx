@@ -503,8 +503,7 @@ const SideTabsPanelsComponent: FC<SidePanelsProps> = ({
         viewportSize.current.width = clientWidth ?? 0;
         viewportSize.current.height = clientHeight ?? 0;
         setViewportSizeMatch(checkContentFit());
-        // allow panel to expand up to full viewport width
-        setPanelMaxWidth(rootRef.current.clientWidth);
+        setPanelMaxWidth(rootRef.current.clientWidth * 0.4);
         setSnap(undefined);
       });
     });
@@ -512,8 +511,7 @@ const SideTabsPanelsComponent: FC<SidePanelsProps> = ({
     if (root) {
       observer.observe(root);
       setViewportSizeMatch(checkContentFit());
-      // initial panel max width: full viewport width
-      setPanelMaxWidth(root.clientWidth);
+      setPanelMaxWidth(root.clientWidth * 0.4);
       setInitialized(true);
     }
 

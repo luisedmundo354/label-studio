@@ -161,6 +161,7 @@ class RichTextPieceView extends Component {
         region.updateAppearenceFromState();
         const ann = this.props.item.annotation;
         ann.saveDraftImmediately();
+        control.unselectAll();
       } else {
         console.log('no blockId', blockId, 'no region', region?.results?.[0]);
       }
@@ -174,11 +175,13 @@ class RichTextPieceView extends Component {
    */
   displayMenu = (e) => {
     e.preventDefault();
-    const {item} = this.props;
+    // Disable context menu when clicking inside an existing highlight region
+    if (this._determineRegion(e.target)) {
+      return;
+    }
+    const { item } = this.props;
     const controls = toJS(item.states());
     const choices = controls[0]?.children ?? [];
-    console.log('menu id up inline', MENU_ID);
-    console.log(choices);
     contextMenu.show({
       id: MENU_ID,
       event: e,

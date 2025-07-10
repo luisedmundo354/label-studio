@@ -223,12 +223,7 @@ export const PanelTabsBase: FC<BaseProps> = ({
           const shiftTop = isDefined(shift) && ["top", "top-left"].includes(shift);
 
           const width = clamp(shiftLeft ? w - wMod : w + wMod, DEFAULT_PANEL_WIDTH, maxWidth);
-          // desired new height based on drag
-          const desiredHeight = shiftTop ? h - hMod : h + hMod;
-          // determine max allowed height: if dragging bottom (not shiftTop), fill to container bottom
-          const containerHeight = root.current?.clientHeight ?? Infinity;
-          const maxAllowedHeight = !shiftTop ? containerHeight - t : t + h;
-          const height = clamp(desiredHeight, DEFAULT_PANEL_MIN_HEIGHT, maxAllowedHeight);
+          const height = clamp(shiftTop ? h -hMod : h + hMod, DEFAULT_PANEL_MIN_HEIGHT, t + h);
 
           const top = shiftTop ? t + (h - height) : t;
           const left = shiftLeft ? l + (w - width) : l;
@@ -315,8 +310,7 @@ export const PanelTabsBase: FC<BaseProps> = ({
                 {!visible && !collapsed && <Elem name="title">{panelViews.map((view) => view.title).join(" ")}</Elem>}
               </Elem>
               <Elem name="header-right">
-                {/* Collapse/expand panel group */}
-                {(!detached || !collapsed) && (
+                {(!detached || collapsed) && (
                   <Elem
                     name="toggle"
                     mod={{ detached, collapsed, alignment }}
@@ -327,17 +321,14 @@ export const PanelTabsBase: FC<BaseProps> = ({
                   </Elem>
                 )}
                 {!collapsed && (
-                  <>
-                    {/* Collapse/expand panel */}
-                    <Elem
-                      name="toggle"
-                      mod={{ detached, collapsed, alignment }}
-                      onClick={handlePanelToggle}
-                      data-tooltip={tooltipText}
-                    >
-                      {visible ? <IconCollapseSmall /> : <IconExpandSmall />}
-                    </Elem>
-                  </>
+                  <Elem
+                    name="toggle"
+                    mod={{ detached, collapsed, alignment }}
+                    onClick={handlePanelToggle}
+                    data-tooltip={tooltipText}
+                  >
+                    {visible ? <IconCollapseSmall /> : <IconExpandSmall />}
+                  </Elem>
                 )}
               </Elem>
             </Elem>

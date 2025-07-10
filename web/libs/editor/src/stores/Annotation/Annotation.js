@@ -601,7 +601,10 @@ const _Annotation = types
       const res = region.results?.[0];
       const blockId = res?.meta?.blockId;
       if (blockId) {
+        // remove the static-block text and persist immediately
         region.object.removeStaticBlock(blockId);
+        // save deletion of the block region as a draft immediately
+        // self.saveDraftImmediately();
       }
 
       if (region.type === "polygonregion") {
