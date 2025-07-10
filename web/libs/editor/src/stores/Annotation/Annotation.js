@@ -603,8 +603,6 @@ const _Annotation = types
       if (blockId) {
         // remove the static-block text and persist immediately
         region.object.removeStaticBlock(blockId);
-        // save deletion of the block region as a draft immediately
-        self.saveDraftImmediately();
       }
 
       if (region.type === "polygonregion") {
@@ -612,6 +610,11 @@ const _Annotation = types
       }
 
       destroy(region);
+
+      if (blockId) {
+        // save deletion of the block region as a draft immediately
+        self.saveDraftImmediatelyWithResults({ force: true });
+      }
 
       // If the annotation was in a drawing state and the user deletes it, we need to reset the drawing state
       // to avoid the user being stuck in a drawing state
@@ -766,17 +769,19 @@ const _Annotation = types
       onSnapshot(self.areas, self.autosave);
     }),
 
-    async saveDraft(params) {
+    // params.force=true forces persisting even when no regions (empty annotation)
+    async saveDraft(params = {}) {
       // There is no draft to save as it was already saved as an annotation
       if (self.submissionStarted) return;
       // if this is now a history item or prediction don't save it
       if (!self.editable) return;
 
       const result = self.serializeAnnotation({ fast: true });
-      // if this is new annotation and no regions added yet
+      // skip saving if brand-new annotation has no regions, unless forced
+      const force = params.force === true;
+      if (!isFF(FF_LSDV_3009) && !self.pk && !result.length && !force) return;
 
-      if (!isFF(FF_LSDV_3009) && !self.pk && !result.length) return;
-
+      console.log("passed saveDraft check")
       self.setDraftSelected();
       self.versions.draft = result;
       self.setDraftSaving(true);
