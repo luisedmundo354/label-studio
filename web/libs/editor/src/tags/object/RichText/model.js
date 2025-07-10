@@ -1,5 +1,5 @@
 import * as ff from "@humansignal/core/lib/utils/feature-flags/ff";
-import { destroy as destroyNode, flow, types } from "mobx-state-tree";
+import { destroy as destroyNode, flow, types, getRoot } from "mobx-state-tree";
 import { createRef } from "react";
 import Constants from "../../../core/Constants";
 import { customTypes } from "../../../core/CustomTypes";
@@ -555,8 +555,7 @@ const Model = types
         self.setLoaded(false);
         self.setLoaded(true);
         self.needsUpdate();
-        // self.annotation.saveDraftImmediately();
-        getRoot(self).updateAnnotation();
+
       },
     };
   });

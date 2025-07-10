@@ -604,7 +604,7 @@ const _Annotation = types
         // remove the static-block text and persist immediately
         region.object.removeStaticBlock(blockId);
         // save deletion of the block region as a draft immediately
-        // self.saveDraftImmediately();
+        self.saveDraftImmediately();
       }
 
       if (region.type === "polygonregion") {
